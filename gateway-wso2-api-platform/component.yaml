@@ -1,0 +1,173 @@
+# =============================================================================
+# USAGE EXAMPLE
+# =============================================================================
+#
+# The following resources demonstrate how to use the api-management trait
+# with the standard OpenChoreo service ComponentType. The ComponentType at
+# samples/getting-started/component-types/service.yaml already includes
+# "api-management" in its allowedTraits.
+
+# --- Component: Using WSO2 API Platform for API management ---
+---
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: greeting-service
+  namespace: default
+spec:
+  owner:
+    projectName: default
+  autoDeploy: true
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/service
+
+  traits:
+    - name: api-management
+      instanceName: greeter-api
+      kind: ClusterTrait
+      parameters:
+        jwtAuth:
+          enabled: true
+        rateLimit:
+          enabled: true
+          limits:
+            - requests: 5
+              duration: "1m"
+        addHeaders:
+          enabled: true
+          requestHeaders:
+            - name: X-Gateway
+              value: wso2-api-platform
+          responseHeaders:
+            - name: X-Powered-By
+              value: OpenChoreo
+
+---
+# --- Workload ---
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: greeting-service-workload
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: greeting-service
+
+  endpoints:
+    http:
+      type: HTTP
+      port: 9090
+      visibility: [external]
+
+  container:
+    image: "ghcr.io/openchoreo/samples/greeter-service:latest"
+    args:
+      - --port
+      - "9090"
+
+---
+# =============================================================================
+# RENDERED OUTPUT (what gets applied to the data plane)
+# =============================================================================
+#
+# With the api-management trait applied, the following resources are created
+# or patched:
+#
+# 1. Backend: kgateway static backend → WSO2 router
+#    ---
+#    apiVersion: gateway.kgateway.dev/v1alpha1
+#    kind: Backend
+#    metadata:
+#      name: greeting-service-api-gw-backend
+#    spec:
+#      type: Static
+#      static:
+#        hosts:
+#          - host: api-platform-default-gateway-router.openchoreo-data-plane
+#            port: 8080
+#
+# 2. RestApi: WSO2 API Platform API definition
+#    ---
+#    apiVersion: gateway.api-platform.wso2.com/v1alpha1
+#    kind: RestApi
+#    metadata:
+#      name: <release-name>
+#    spec:
+#      displayName: development-default-greeting-service
+#      version: v1.0
+#      context: /development-default-greeting-service
+#      upstream:
+#        main:
+#          url: http://greeting-service.<namespace>:9090
+#      policies:
+#        - name: jwt-auth
+#          version: v0
+#        - name: basic-ratelimit
+#          version: v0
+#          params:
+#            limits:
+#              - requests: 5
+#                duration: "1m"
+#        - name: add-headers
+#          version: v0
+#          params:
+#            requestHeaders:
+#              - name: X-Gateway
+#                value: wso2-api-platform
+#            responseHeaders:
+#              - name: X-Powered-By
+#                value: OpenChoreo
+#      operations:
+#        - method: GET
+#          path: "/*"
+#        - method: POST
+#          path: "/*"
+#        - method: PUT
+#          path: "/*"
+#        - method: PATCH
+#          path: "/*"
+#        - method: DELETE
+#          path: "/*"
+#        - method: OPTIONS
+#          path: "/*"
+#
+# 3. Patched HTTPRoute (backendRef replaced, URL rewrite updated):
+#    ---
+#    apiVersion: gateway.networking.k8s.io/v1
+#    kind: HTTPRoute
+#    spec:
+#      rules:
+#        - filters:
+#            - type: URLRewrite
+#              urlRewrite:
+#                path:
+#                  type: ReplacePrefixMatch
+#                  replacePrefixMatch: /development-default-greeting-service
+#          backendRefs:
+#            - group: gateway.kgateway.dev
+#              kind: Backend
+#              name: greeting-service-api-gw-backend
+#
+# =============================================================================
+# NOTES
+# =============================================================================
+#
+# 1. Derived Values:
+#    The trait automatically derives displayName, context, version, upstream URL,
+#    and operations from the component metadata and workload endpoints.
+#
+# 2. Traffic Path:
+#    Client → kgateway (TLS, hostname routing) → WSO2 Router (policies) → Service → Pod
+#
+# 3. Context Path Pattern:
+#    /<environment>-<namespace>-<componentName>
+#    Example: /development-default-greeting-service
+#
+# 4. Available Policies:
+#    - jwtAuth:    JWT authentication (enabled: true)
+#    - rateLimit:  Request rate limiting (enabled: true, limits: [...])
+#    - addHeaders: Custom request/response headers (enabled: true, requestHeaders/responseHeaders: [...])
+#    All policies are disabled by default. See component-without-trait.yaml for
+#    an example without policies.
