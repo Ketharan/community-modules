@@ -5,8 +5,8 @@ apiVersion: v2
 name: observability-tracing-opensearch
 description: A Helm chart for OpenChoreo Observability Tracing module with OpenTelemetry Collector and OpenSearch
 type: application
-version: 0.3.4
-appVersion: "0.3.4"
+version: 0.3.5
+appVersion: "0.3.5"
 keywords:
   - opensearch
   - observability
@@ -22,5 +22,5 @@ dependencies:
     condition: openSearch.enabled
   - name: opentelemetry-collector
     repository: https://open-telemetry.github.io/opentelemetry-helm-charts
-    version: 0.140.0
+    version: 0.146.1
     condition: opentelemetry-collector.enabled

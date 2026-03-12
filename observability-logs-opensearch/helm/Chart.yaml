@@ -5,8 +5,8 @@ apiVersion: v2
 name: observability-logs-opensearch
 description: A Helm chart for OpenChoreo Observability Logs module with Fluent Bit and OpenSearch
 type: application
-version: 0.3.4
-appVersion: "0.3.4"
+version: 0.3.5
+appVersion: "0.3.5"
 keywords:
   - opensearch
   - observability
@@ -22,5 +22,5 @@ dependencies:
     condition: openSearch.enabled
   - name: fluent-bit
     repository: https://fluent.github.io/helm-charts
-    version: 0.54.0
+    version: 0.56.0
     condition: fluent-bit.enabled
