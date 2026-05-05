@@ -1,0 +1,101 @@
+{{- if and .Values.upstream.install .Values.installDefaultPolicies }}
+# Default SandboxTemplate for agent workloads (extensions.agents.x-k8s.io/v1alpha1).
+#
+# This template defines isolation tiers for the three standard OpenChoreo runtime classes.
+# Per-component SandboxTemplates (named "agent-<component>") are created by the controller
+# at runtime and encode the actual container image.  These global defaults are used by
+# the SandboxWarmPool to keep pre-warmed sandboxes ready for fast claiming.
+---
+# standard tier — runc (default), no runtimeClassName override.
+apiVersion: extensions.agents.x-k8s.io/v1alpha1
+kind: SandboxTemplate
+metadata:
+  name: openchoreo-agent-standard
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/managed-by: agent-sandbox-controller
+    agent.openchoreo.dev/isolation-tier: standard
+  annotations:
+    openchoreo.dev/description: |
+      Standard isolation using hardened Linux namespaces (runc).
+      No extra node requirement. Used as the default tier.
+spec:
+  podTemplate:
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent
+          image: scratch  # overridden per-component by the agent controller
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+---
+{{- if has "gvisor" .Values.runtimeClasses }}
+# enhanced tier — gVisor (syscall interception via user-space kernel).
+# Only created when "gvisor" is listed in .Values.runtimeClasses.
+apiVersion: extensions.agents.x-k8s.io/v1alpha1
+kind: SandboxTemplate
+metadata:
+  name: openchoreo-agent-enhanced
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/managed-by: agent-sandbox-controller
+    agent.openchoreo.dev/isolation-tier: enhanced
+  annotations:
+    openchoreo.dev/description: |
+      Enhanced isolation using gVisor. Requires runtimeClassName "gvisor" on nodes.
+spec:
+  podTemplate:
+    spec:
+      runtimeClassName: gvisor
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent
+          image: scratch  # overridden per-component by the agent controller
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+---
+{{- end }}
+{{- if has "kata" .Values.runtimeClasses }}
+# maximum tier — Kata Containers (full VM isolation via Firecracker/QEMU).
+# Only created when "kata" is listed in .Values.runtimeClasses.
+apiVersion: extensions.agents.x-k8s.io/v1alpha1
+kind: SandboxTemplate
+metadata:
+  name: openchoreo-agent-maximum
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/managed-by: agent-sandbox-controller
+    agent.openchoreo.dev/isolation-tier: maximum
+  annotations:
+    openchoreo.dev/description: |
+      Maximum isolation using Kata Containers. Requires runtimeClassName "kata" on nodes.
+spec:
+  podTemplate:
+    spec:
+      runtimeClassName: kata
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent
+          image: scratch  # overridden per-component by the agent controller
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+{{- end }}
+{{- end }}

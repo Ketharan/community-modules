@@ -1,0 +1,137 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: sandboxpolicies.agent.openchoreo.dev
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.2
+spec:
+  group: agent.openchoreo.dev
+  names:
+    kind: SandboxPolicy
+    listKind: SandboxPolicyList
+    plural: sandboxpolicies
+    shortNames:
+      - sp
+      - sps
+    singular: sandboxpolicy
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .spec.defaultEgress
+          name: DefaultEgress
+          type: string
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: SandboxPolicy defines network egress and access controls for an agent workload.
+          properties:
+            apiVersion:
+              type: string
+            kind:
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                defaultEgress:
+                  default: deny
+                  description: Default action for outbound traffic not matching any rule.
+                  enum:
+                    - deny
+                    - allow
+                  type: string
+                allowedHosts:
+                  description: Hosts and ports the agent may reach.
+                  items:
+                    properties:
+                      host:
+                        minLength: 1
+                        type: string
+                      ports:
+                        items:
+                          format: int32
+                          type: integer
+                        type: array
+                      protocol:
+                        default: TCP
+                        enum:
+                          - TCP
+                          - UDP
+                        type: string
+                    required:
+                      - host
+                    type: object
+                  type: array
+                allowedMCPServers:
+                  description: MCP servers the agent may call.
+                  items:
+                    properties:
+                      url:
+                        minLength: 1
+                        type: string
+                      scopes:
+                        items:
+                          type: string
+                        type: array
+                    required:
+                      - url
+                    type: object
+                  type: array
+                tokenLimits:
+                  description: "Reserved for Phase 2: LLM token budget controls."
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                operations:
+                  description: "Reserved for Phase 2: shell/filesystem constraints."
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                audit:
+                  description: "Reserved for Phase 2: structured audit logging."
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                toolAccess:
+                  description: "Reserved for Phase 2: MCP tool governance."
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+              required:
+                - defaultEgress
+              type: object
+            status:
+              properties:
+                observedGeneration:
+                  format: int64
+                  type: integer
+                conditions:
+                  items:
+                    properties:
+                      lastTransitionTime:
+                        format: date-time
+                        type: string
+                      message:
+                        type: string
+                      observedGeneration:
+                        format: int64
+                        type: integer
+                      reason:
+                        type: string
+                      status:
+                        type: string
+                      type:
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

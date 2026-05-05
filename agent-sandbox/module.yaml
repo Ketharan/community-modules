@@ -1,0 +1,11 @@
+# Copyright 2025 The OpenChoreo Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# Module manifest used by the CI workflow to discover Docker images to build.
+# The CI reads this file to determine what to build and push to GHCR when
+# the chart version in helm/Chart.yaml is bumped and merged to main.
+
+images:
+  - name: agent-sandbox-controller
+    context: .
+    dockerfile: Dockerfile

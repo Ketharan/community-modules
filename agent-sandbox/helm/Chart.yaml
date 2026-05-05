@@ -1,0 +1,28 @@
+apiVersion: v2
+name: agent-sandbox
+description: |
+  OpenChoreo Agent Sandbox module. Provides kernel-level isolation for AI agent
+  workloads using gVisor (enhanced tier) or Kata Containers (maximum tier), plus
+  network egress controls via SandboxPolicy.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - openchoreo
+  - agent
+  - sandbox
+  - gvisor
+  - kata
+  - security
+home: https://github.com/openchoreo/community-modules/tree/main/agent-sandbox
+sources:
+  - https://github.com/openchoreo/community-modules
+annotations:
+  openchoreo.dev/module-category: AI
+  openchoreo.dev/sentinel-crd: sandboxpolicies.agent.openchoreo.dev
+  openchoreo.dev/min-openchoreo-version: "1.1.0"
+  # The upstream kubernetes-sigs/agent-sandbox controller is installed as a pre-install
+  # Helm hook Job (see templates/upstream-install.yaml). It is not a Helm dependency
+  # because it has no published Helm chart — only a manifest.yaml on GitHub releases.
+  openchoreo.dev/upstream-controller: "kubernetes-sigs/agent-sandbox"
+  openchoreo.dev/upstream-version: "v0.4.3"

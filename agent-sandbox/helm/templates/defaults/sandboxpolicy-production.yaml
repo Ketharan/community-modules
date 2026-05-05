@@ -1,0 +1,16 @@
+{{- if .Values.installDefaultPolicies }}
+apiVersion: agent.openchoreo.dev/v1alpha1
+kind: SandboxPolicy
+metadata:
+  name: production
+  namespace: {{ .Values.namespace }}
+  annotations:
+    openchoreo.dev/description: |
+      Strict egress policy for production environments.
+      Denies all outbound traffic except explicitly listed hosts.
+      Add entries to allowedHosts for each external service your agent must reach.
+spec:
+  defaultEgress: deny
+  allowedHosts: []
+  allowedMCPServers: []
+{{- end }}

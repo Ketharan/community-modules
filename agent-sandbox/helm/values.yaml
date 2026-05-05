@@ -1,0 +1,54 @@
+# Default values for agent-sandbox.
+
+image:
+  repository: ghcr.io/openchoreo/agent-sandbox-controller
+  tag: "0.1.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Namespace where the controller is deployed. Must match the openchoreo control plane namespace.
+namespace: openchoreo-control-plane
+
+# leaderElection enables HA mode with multiple replicas.
+leaderElection: false
+
+# installDefaultPolicies installs the default "development" and "production" SandboxPolicies.
+installDefaultPolicies: true
+
+# installAgentClusterComponentType installs (or updates) the "agent" ClusterComponentType
+# into the openchoreo control plane. Set to false if you manage the ClusterComponentType manually.
+installAgentClusterComponentType: true
+
+# runtimeClasses lists the isolation tiers whose RuntimeClass is already installed on
+# the data-plane nodes. Only tiers listed here will be usable in Components.
+# Valid values: gvisor, kata
+runtimeClasses:
+  - gvisor
+  - kata
+
+# warmPool controls the number of pre-warmed Sandbox pods kept ready per isolation tier.
+warmPool:
+  standardReplicas: 2
+  enhancedReplicas: 2
+  maximumReplicas: 1
+
+# upstream controls the installation of the kubernetes-sigs/agent-sandbox controller,
+# which provides pre-warmed sandbox pools (SandboxTemplate/SandboxClaim/SandboxWarmPool).
+upstream:
+  # install: when true, a pre-install Helm hook Job fetches and applies the upstream
+  # manifest before the agent-sandbox controller itself is deployed.
+  install: true
+  # version: the kubernetes-sigs/agent-sandbox release tag to install.
+  version: "v0.4.3"
+  # manifestURL: override the full URL for the manifest; leave empty to auto-build
+  # from https://github.com/kubernetes-sigs/agent-sandbox/releases/download/<version>/manifest.yaml
+  manifestURL: ""

@@ -1,0 +1,52 @@
+{{- if and .Values.upstream.install .Values.installDefaultPolicies }}
+# Default SandboxWarmPool resources (extensions.agents.x-k8s.io/v1alpha1).
+#
+# Each warm pool keeps a number of Sandbox pods pre-created and ready so that
+# SandboxClaims are fulfilled without the cold-start penalty of spinning up a new pod.
+---
+# Warm pool for the standard isolation tier (runc).
+apiVersion: extensions.agents.x-k8s.io/v1alpha1
+kind: SandboxWarmPool
+metadata:
+  name: openchoreo-agent-standard
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/managed-by: agent-sandbox-controller
+    agent.openchoreo.dev/isolation-tier: standard
+spec:
+  replicas: {{ .Values.warmPool.standardReplicas | default 2 }}
+  sandboxTemplateRef:
+    name: openchoreo-agent-standard
+---
+{{- if has "gvisor" .Values.runtimeClasses }}
+# Warm pool for the enhanced tier (gVisor).
+apiVersion: extensions.agents.x-k8s.io/v1alpha1
+kind: SandboxWarmPool
+metadata:
+  name: openchoreo-agent-enhanced
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/managed-by: agent-sandbox-controller
+    agent.openchoreo.dev/isolation-tier: enhanced
+spec:
+  replicas: {{ .Values.warmPool.enhancedReplicas | default 2 }}
+  sandboxTemplateRef:
+    name: openchoreo-agent-enhanced
+---
+{{- end }}
+{{- if has "kata" .Values.runtimeClasses }}
+# Warm pool for the maximum tier (Kata Containers).
+apiVersion: extensions.agents.x-k8s.io/v1alpha1
+kind: SandboxWarmPool
+metadata:
+  name: openchoreo-agent-maximum
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/managed-by: agent-sandbox-controller
+    agent.openchoreo.dev/isolation-tier: maximum
+spec:
+  replicas: {{ .Values.warmPool.maximumReplicas | default 1 }}
+  sandboxTemplateRef:
+    name: openchoreo-agent-maximum
+{{- end }}
+{{- end }}
