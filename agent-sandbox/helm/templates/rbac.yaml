@@ -29,11 +29,14 @@ rules:
   - apiGroups: [openchoreo.dev]
     resources: [renderedreleases]
     verbs: [get, list, watch, create, update, patch, delete]
-  # Read SandboxPolicy for network policy generation
+  # Read SandboxPolicy for NetworkPolicy generation (included in RenderedRelease)
   - apiGroups: [agent.openchoreo.dev]
-    resources: [sandboxpolicies, sandboxpolicies/status]
-    verbs: [get, list, watch, create, update, patch, delete]
-  # Create/update NetworkPolicy for egress enforcement
+    resources: [sandboxpolicies]
+    verbs: [get, list, watch]
+  - apiGroups: [agent.openchoreo.dev]
+    resources: [sandboxpolicies/status]
+    verbs: [get]
+  # NetworkPolicy for control-plane-level egress enforcement (policy controller)
   - apiGroups: [networking.k8s.io]
     resources: [networkpolicies]
     verbs: [get, list, watch, create, update, patch, delete]

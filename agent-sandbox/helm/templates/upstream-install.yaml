@@ -91,6 +91,10 @@ spec:
     spec:
       serviceAccountName: agent-sandbox-upstream-installer
       restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: kubectl
           image: bitnami/kubectl:latest

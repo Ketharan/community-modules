@@ -129,15 +129,42 @@ func (r *Reconciler) reconcileAgentComponent(
 		return ctrl.Result{}, nil // condition already set
 	}
 
-	// 4. Create/update the RenderedRelease with SandboxTemplate + SandboxClaim
+	// 4. Fetch the referenced SandboxPolicy (if any) for NetworkPolicy generation.
+	var policy *sandboxv1alpha1.SandboxPolicy
+	if params.SandboxPolicyRef != "" {
+		policy = &sandboxv1alpha1.SandboxPolicy{}
+		if err := r.Get(ctx, types.NamespacedName{
+			Name:      params.SandboxPolicyRef,
+			Namespace: comp.Namespace,
+		}, policy); err != nil {
+			if apierrors.IsNotFound(err) {
+				// Try control-plane namespace as fallback (default policies live there).
+				if err := r.Get(ctx, types.NamespacedName{
+					Name:      params.SandboxPolicyRef,
+					Namespace: "openchoreo-control-plane",
+				}, policy); err != nil {
+					if apierrors.IsNotFound(err) {
+						r.setReadyFalse(comp, ReasonInvalidConfiguration,
+							fmt.Sprintf("SandboxPolicy %q not found", params.SandboxPolicyRef))
+						return ctrl.Result{}, nil
+					}
+					return ctrl.Result{}, err
+				}
+			} else {
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
+	// 5. Create/update the RenderedRelease with SandboxTemplate + SandboxClaim + NetworkPolicy
 	//    targeting the data-plane namespace.
-	if err := r.ensureRenderedRelease(ctx, comp, params, &workload.Spec.WorkloadTemplateSpec.Container, env); err != nil {
+	if err := r.ensureRenderedRelease(ctx, comp, params, &workload.Spec.WorkloadTemplateSpec.Container, env, policy); err != nil {
 		r.setReadyFalse(comp, ReasonReconcileError,
 			fmt.Sprintf("Failed to ensure RenderedRelease: %v", err))
 		return ctrl.Result{}, err
 	}
 
-	// 5. Check whether the RenderedRelease has been applied to the data plane.
+	// 6. Check whether the RenderedRelease has been applied to the data plane.
 	ready, msg, err := r.isRenderedReleaseReady(ctx, comp, env)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -148,7 +175,7 @@ func (r *Reconciler) reconcileAgentComponent(
 		return ctrl.Result{RequeueAfter: sandboxPollInterval}, nil
 	}
 
-	// 6. Resources applied — mark the Component as ready.
+	// 7. Resources applied — mark the Component as ready.
 	readyMsg := fmt.Sprintf("Agent sandbox resources applied to data plane for environment %q", env)
 	r.setReadyTrue(comp, ReasonSandboxClaimBound, readyMsg)
 	logger.Info("Agent Component reconciled", "component", comp.Name,

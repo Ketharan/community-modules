@@ -26,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	openchoreov1alpha1 "github.com/openchoreo/openchoreo/api/v1alpha1"
+
+	sandboxv1alpha1 "github.com/openchoreo/community-modules/agent-sandbox/api/v1alpha1"
 )
 
 // Label keys stamped on sandbox resources managed by this controller.
@@ -51,6 +53,7 @@ func (r *Reconciler) ensureRenderedRelease(
 	params *agentParams,
 	container *openchoreov1alpha1.Container,
 	env string,
+	policy *sandboxv1alpha1.SandboxPolicy,
 ) error {
 	logger := log.FromContext(ctx)
 	rrName := renderedReleaseName(comp.Name, env)
@@ -89,6 +92,19 @@ func (r *Reconciler) ensureRenderedRelease(
 		resources = append(resources, openchoreov1alpha1.Resource{
 			ID:     "sandbox-warmpool",
 			Object: &runtime.RawExtension{Raw: warmPoolJSON},
+		})
+	}
+
+	// Add NetworkPolicy if a SandboxPolicy is referenced — the NetworkPolicy must
+	// land in the data-plane namespace so it applies to the agent Sandbox pods.
+	if policy != nil {
+		npJSON, err := buildNetworkPolicyJSON(policy, baseName, dpNamespace, comp.Name)
+		if err != nil {
+			return fmt.Errorf("failed to build NetworkPolicy JSON: %w", err)
+		}
+		resources = append(resources, openchoreov1alpha1.Resource{
+			ID:     "network-policy",
+			Object: &runtime.RawExtension{Raw: npJSON},
 		})
 	}
 
@@ -366,4 +382,97 @@ func buildSandboxWarmPoolJSON(
 		},
 	}
 	return json.Marshal(manifest)
+}
+
+// buildNetworkPolicyJSON generates a Kubernetes NetworkPolicy from a SandboxPolicy,
+// targeting the data-plane namespace so the policy applies to the Sandbox pods.
+func buildNetworkPolicyJSON(
+	policy *sandboxv1alpha1.SandboxPolicy,
+	name, namespace, compName string,
+) ([]byte, error) {
+	// Always allow kube-dns (UDP+TCP 53).
+	egressRules := []interface{}{
+		map[string]interface{}{
+			"ports": []interface{}{
+				map[string]interface{}{"protocol": "UDP", "port": 53},
+				map[string]interface{}{"protocol": "TCP", "port": 53},
+			},
+		},
+	}
+
+	// Per-host rules.
+	for _, ah := range policy.Spec.AllowedHosts {
+		rule := map[string]interface{}{}
+		if len(ah.Ports) > 0 {
+			ports := make([]interface{}, 0, len(ah.Ports))
+			proto := "TCP"
+			if ah.Protocol == "UDP" {
+				proto = "UDP"
+			}
+			for _, p := range ah.Ports {
+				ports = append(ports, map[string]interface{}{
+					"protocol": proto,
+					"port":     p,
+				})
+			}
+			rule["ports"] = ports
+		}
+		if isCIDR(ah.Host) {
+			rule["to"] = []interface{}{
+				map[string]interface{}{
+					"ipBlock": map[string]interface{}{"cidr": ah.Host},
+				},
+			}
+		}
+		egressRules = append(egressRules, rule)
+	}
+
+	// Per-MCP server rules (HTTPS 443).
+	for range policy.Spec.AllowedMCPServers {
+		egressRules = append(egressRules, map[string]interface{}{
+			"ports": []interface{}{
+				map[string]interface{}{"protocol": "TCP", "port": 443},
+			},
+		})
+	}
+
+	// Catch-all egress when defaultEgress is "allow".
+	if policy.Spec.DefaultEgress == sandboxv1alpha1.EgressActionAllow {
+		egressRules = append(egressRules, map[string]interface{}{})
+	}
+
+	manifest := map[string]interface{}{
+		"apiVersion": "networking.k8s.io/v1",
+		"kind":       "NetworkPolicy",
+		"metadata": map[string]interface{}{
+			"name":      "agent-sandbox-" + policy.Name,
+			"namespace": namespace,
+			"labels": map[string]string{
+				labelManagedBy: managedByValue,
+				labelComponent: compName,
+				labelPolicyRef: policy.Name,
+			},
+		},
+		"spec": map[string]interface{}{
+			"podSelector": map[string]interface{}{
+				"matchLabels": map[string]string{
+					labelPolicyRef: policy.Name,
+				},
+			},
+			"policyTypes": []string{"Egress"},
+			"egress":      egressRules,
+		},
+	}
+	return json.Marshal(manifest)
+}
+
+// isCIDR returns true when the string looks like an IP or CIDR block.
+func isCIDR(s string) bool {
+	for _, c := range s {
+		if c == '/' || (c >= '0' && c <= '9') || c == '.' || c == ':' {
+			continue
+		}
+		return false
+	}
+	return len(s) > 0
 }
