@@ -11,6 +11,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -440,10 +441,26 @@ func (r *Reconciler) findComponentsForSandboxPolicy(
 	ctx context.Context, obj client.Object,
 ) []ctrl.Request {
 	policyName := obj.GetName()
+	policyNamespace := obj.GetNamespace()
+
+	// List components in the policy's own namespace.
 	var list openchoreov1alpha1.ComponentList
-	if err := r.List(ctx, &list, client.InNamespace(obj.GetNamespace())); err != nil {
+	if err := r.List(ctx, &list, client.InNamespace(policyNamespace)); err != nil {
 		return nil
 	}
+
+	// Also list components across all namespaces so that control-plane default
+	// policies (which live in the control-plane namespace) trigger reconciliation
+	// for components in other namespaces that reference them.
+	var allList openchoreov1alpha1.ComponentList
+	if err := r.List(ctx, &allList); err == nil {
+		for _, comp := range allList.Items {
+			if comp.Namespace != policyNamespace {
+				list.Items = append(list.Items, comp)
+			}
+		}
+	}
+
 	var reqs []ctrl.Request
 	for _, comp := range list.Items {
 		if !isAgentComponent(&comp) {
@@ -463,24 +480,11 @@ func sandboxPolicyRefFromComp(comp *openchoreov1alpha1.Component) string {
 	if comp.Spec.Parameters == nil {
 		return ""
 	}
-	raw := string(comp.Spec.Parameters.Raw)
-	const key = `"sandboxPolicyRef"`
-	idx := strings.Index(raw, key)
-	if idx < 0 {
+	var params struct {
+		SandboxPolicyRef string `json:"sandboxPolicyRef"`
+	}
+	if err := json.Unmarshal(comp.Spec.Parameters.Raw, &params); err != nil {
 		return ""
 	}
-	rest := raw[idx+len(key):]
-	colonIdx := strings.Index(rest, ":")
-	if colonIdx < 0 {
-		return ""
-	}
-	rest = strings.TrimSpace(rest[colonIdx+1:])
-	if len(rest) == 0 || rest[0] != '"' {
-		return ""
-	}
-	end := strings.Index(rest[1:], `"`)
-	if end < 0 {
-		return ""
-	}
-	return rest[1 : end+1]
+	return params.SandboxPolicyRef
 }

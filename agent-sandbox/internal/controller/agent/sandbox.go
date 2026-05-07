@@ -15,6 +15,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -401,8 +402,23 @@ func buildNetworkPolicyJSON(
 	}
 
 	// Per-host rules.
+	// Phase 1 only supports IP/CIDR hosts in NetworkPolicy ipBlock rules.
+	// DNS-based hostnames are skipped because NetworkPolicy has no DNS-aware
+	// destination matching — a rule with ports but no "to" would allow traffic
+	// to any destination on those ports.
 	for _, ah := range policy.Spec.AllowedHosts {
-		rule := map[string]interface{}{}
+		cidr, ok := normalizeCIDR(ah.Host)
+		if !ok {
+			// Skip DNS hostnames; they cannot be enforced via NetworkPolicy ipBlock.
+			continue
+		}
+		rule := map[string]interface{}{
+			"to": []interface{}{
+				map[string]interface{}{
+					"ipBlock": map[string]interface{}{"cidr": cidr},
+				},
+			},
+		}
 		if len(ah.Ports) > 0 {
 			ports := make([]interface{}, 0, len(ah.Ports))
 			proto := "TCP"
@@ -417,18 +433,14 @@ func buildNetworkPolicyJSON(
 			}
 			rule["ports"] = ports
 		}
-		if isCIDR(ah.Host) {
-			rule["to"] = []interface{}{
-				map[string]interface{}{
-					"ipBlock": map[string]interface{}{"cidr": ah.Host},
-				},
-			}
-		}
 		egressRules = append(egressRules, rule)
 	}
 
 	// Per-MCP server rules (HTTPS 443).
-	for range policy.Spec.AllowedMCPServers {
+	// Each server gets its own rule. In Phase 1, only the port is enforced;
+	// DNS-based URL targets cannot be expressed as NetworkPolicy ipBlock rules.
+	// Deduplicate since all currently resolve to the same port-only rule.
+	if len(policy.Spec.AllowedMCPServers) > 0 {
 		egressRules = append(egressRules, map[string]interface{}{
 			"ports": []interface{}{
 				map[string]interface{}{"protocol": "TCP", "port": 443},
@@ -466,13 +478,21 @@ func buildNetworkPolicyJSON(
 	return json.Marshal(manifest)
 }
 
-// isCIDR returns true when the string looks like an IP or CIDR block.
-func isCIDR(s string) bool {
-	for _, c := range s {
-		if c == '/' || (c >= '0' && c <= '9') || c == '.' || c == ':' {
-			continue
-		}
-		return false
+// normalizeCIDR checks whether s is a valid IP or CIDR block and returns a
+// normalized CIDR string. Bare IPs (e.g. "10.0.0.1") are converted to /32
+// (or /128 for IPv6) so they are valid for NetworkPolicy ipBlock rules.
+func normalizeCIDR(s string) (string, bool) {
+	// Try CIDR notation first (e.g. "10.0.0.0/8").
+	if _, _, err := net.ParseCIDR(s); err == nil {
+		return s, true
 	}
-	return len(s) > 0
+	// Try bare IP (e.g. "10.0.0.1") and append a host mask.
+	ip := net.ParseIP(s)
+	if ip == nil {
+		return "", false
+	}
+	if ip.To4() != nil {
+		return s + "/32", true
+	}
+	return s + "/128", true
 }

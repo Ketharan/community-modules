@@ -181,14 +181,16 @@ spec:
   defaultEgress: deny
 
   allowedHosts:
-    - host: api.openai.com
+    - host: api.openai.com        # DNS name — recorded for future enforcement (Phase 2)
       ports: [443]
-    - host: api.github.com
+    - host: api.github.com        # DNS name — recorded for future enforcement (Phase 2)
       ports: [443]
-    - host: 10.0.0.0/8      # internal CIDR — uses NetworkPolicy IPBlock
+    - host: 10.0.0.0/8            # CIDR — enforced via NetworkPolicy ipBlock
       ports: [8080, 9090]
+    - host: 52.5.190.128          # bare IP — enforced as /32 ipBlock
+      ports: [443]
 
-  allowedMCPServers:
+  allowedMCPServers:              # Phase 1: allows port 443 egress; URL-level enforcement in Phase 2
     - url: https://mcp.example.com
       scopes: [read, write]
 ```
@@ -262,7 +264,7 @@ upstream:
 
 | Isolation tier | Node requirement | RuntimeClass name |
 |---|---|---|
-| `standard` | Any node | — |
+| `runc` | Any node | — (default container runtime) |
 | `gvisor` | gVisor installed ([setup guide](https://gvisor.dev/docs/user_guide/quick_start/kubernetes/)) | `gvisor` |
 | `kata` | Kata Containers installed ([setup guide](https://katacontainers.io/docs/)) | `kata` |
 
