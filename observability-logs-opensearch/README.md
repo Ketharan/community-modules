@@ -160,6 +160,19 @@ helm upgrade --install observability-logs-opensearch \
 > - `fluent-bit.openSearchPort` should match the passthrough listener port (commonly `11443` if the obs gateway uses non-standard ports).
 > - The adapter and setup job are disabled because they only need to run on the observability plane cluster.
 
+## Troubleshooting
+
+### Observer returns no logs
+
+If Fluent Bit is shipping and `container-logs-*` is filling but Observer queries come back empty, the index was likely created before `openSearchSetup` applied its template — so it has dynamic mappings that don't match what the adapter queries. Delete the index and let Fluent Bit recreate it:
+
+```bash
+kubectl exec -n openchoreo-observability-plane opensearch-master-0 \
+  -- curl -ksu admin:<password> -X DELETE 'https://localhost:9200/container-logs-*'
+```
+
+Only logs written after the deletion will appear (Fluent Bit's tail cursor persists at `/var/lib/fluent-bit/db/tail-container-logs.db`). Generate fresh traffic, or remove that DB and restart the DaemonSet to backfill.
+
 ## Compatibility
 
 > **Note:** The Helm chart versions specified in the installation commands above are for the latest module version compatible with the development version of OpenChoreo. Refer to the compatibility table below to determine the appropriate module version for your OpenChoreo installation.
