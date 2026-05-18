@@ -26,23 +26,44 @@ This module enables advanced network security and observability in OpenChoreo us
 
 ## Configuration
 
-1. After the prerequisites are met, configure your Cilium installation in the dataplane Kubernetes cluster with the following values (using the Cilium CLI or Helm chart) to enable HTTP metrics observability.
+1. After the prerequisites are met, configure your Cilium installation in the dataplane Kubernetes cluster with the following values to enable HTTP metrics observability.
 
-```yaml
-hubble:
-  enabled: true
-  metrics:
-    enabled:
-      - "httpV2:exemplars=true;labelsContext=source_ip,source_namespace,source_workload,destination_ip,destination_namespace,destination_workload,traffic_direction,source_pod,destination_pod"
-      - dns
-      - drop
-      - tcp
-    serviceMonitor:
-      enabled: true
+   Example using Helm:
 
-envoy:
-  enabled: true
-```
+   ```bash
+   helm upgrade --install cilium oci://quay.io/cilium/charts/cilium \
+     --version 1.19.4 \
+     --namespace kube-system \
+     --reuse-values \
+     -f - <<EOF
+   hubble:
+     enabled: true
+     metrics:
+       enabled:
+         - "httpV2:exemplars=true;labelsContext=source_ip,source_namespace,source_workload,destination_ip,destination_namespace,destination_workload,traffic_direction,source_pod,destination_pod"
+         - dns
+         - drop
+         - tcp
+       serviceMonitor:
+         enabled: true
+
+   envoy:
+     enabled: true
+   EOF
+   ```
+
+   Example using Cilium CLI:
+
+   ```bash
+   cilium upgrade \
+   --version 1.19.4 \
+   --namespace kube-system \
+   --reuse-values \
+   --helm-set hubble.enabled=true \
+   --helm-set hubble.metrics.enabled="{httpV2:exemplars=true;labelsContext=source_ip\,source_namespace\,source_workload\,destination_ip\,destination_namespace\,destination_workload\,traffic_direction\,source_pod\,destination_pod,dns,drop,tcp}" \
+   --helm-set hubble.metrics.serviceMonitor.enabled=true \
+   --helm-set envoy.enabled=true
+   ```
 
 2. Add the annotation `openchoreo.dev/networkpolicyprovider: cilium` to the `DataPlane` or `ClusterDataPlane` resources which points to the kubernetes cluster with Cilium configured.
 
