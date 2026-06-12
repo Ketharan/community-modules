@@ -1,0 +1,66 @@
+# Copyright 2026 The OpenChoreo Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Multi-port front for the keda-add-ons-http interceptor, in the `keda` namespace.
+#
+# A KEDA-scaled HTTP service has its own in-cluster Service aliased to the interceptor through an
+# ExternalName. An ExternalName is a DNS CNAME and cannot remap ports; this Service republishes
+# the interceptor pods on common HTTP ports, all forwarded to the interceptor's 8080.
+#
+# To support a port not listed here, add it below AND to the keda-based-scaling trait's
+# `wakeablePorts` default (keda-based-scaling-trait.yaml); keep the two in sync.
+#
+# The selector must match the interceptor pods. Copy from the add-on's own Service if labels differ:
+#   kubectl get svc keda-add-ons-http-interceptor-proxy -n keda -o jsonpath='{.spec.selector}'
+# Apply this on the data plane.
+apiVersion: v1
+kind: Service
+metadata:
+  name: keda-add-ons-http-interceptor-multiport
+  namespace: keda
+  labels:
+    app.kubernetes.io/name: autoscaling-keda
+    app.kubernetes.io/part-of: openchoreo
+    app.kubernetes.io/component: keda-http-interceptor-multiport
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: http-add-on
+    app.kubernetes.io/component: interceptor
+  ports:
+    - name: p-80
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+    - name: p-3000
+      port: 3000
+      targetPort: 8080
+      protocol: TCP
+    - name: p-5000
+      port: 5000
+      targetPort: 8080
+      protocol: TCP
+    - name: p-8000
+      port: 8000
+      targetPort: 8080
+      protocol: TCP
+    - name: p-8080
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: p-8081
+      port: 8081
+      targetPort: 8080
+      protocol: TCP
+    - name: p-8090
+      port: 8090
+      targetPort: 8080
+      protocol: TCP
+    - name: p-9000
+      port: 9000
+      targetPort: 8080
+      protocol: TCP
+    - name: p-9090
+      port: 9090
+      targetPort: 8080
+      protocol: TCP
