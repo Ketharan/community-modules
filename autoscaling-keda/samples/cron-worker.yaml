@@ -1,0 +1,79 @@
+# Copyright 2026 The OpenChoreo Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Cron-driven KEDA-based scaling for a worker (no endpoints), using the STOCK `worker` component
+# type with the `keda-based-scaling` trait ATTACHED (spec.traits).
+#
+# Prerequisites:
+#   1. The data plane advertises the KEDA backend:
+#        kubectl annotate clusterdataplane default \
+#          openchoreo.dev/keda-based-scaling-backend=keda --overwrite
+#   2. The `worker` type allows the trait (componenttypes/worker.yaml applied — see README).
+#
+# Workers require an explicit trigger (the trait rejects an enabled, triggerless, endpoint-less
+# component at render time). The cron trigger below (03:00-04:00 UTC) runs 1 hour per day; the
+# worker sits at zero (minReplicas) the other 23 hours.
+---
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: batch-worker
+  namespace: default
+spec:
+  owner:
+    projectName: default
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/worker           # stock default type, unmodified except allowedTraits
+  autoDeploy: true
+  traits:
+    - kind: ClusterTrait
+      name: keda-based-scaling
+      instanceName: keda-based-scaling
+      parameters:
+        enabled: true
+        minReplicas: 0
+        maxReplicas: 3
+        cooldownPeriod: 30
+        trigger:
+          type: cron
+          metadata:
+            timezone: "Etc/UTC"
+            start: "0 3 * * *"        # run 03:00-04:00 UTC; scaled to ZERO the other 23h
+            end: "0 4 * * *"
+            desiredReplicas: "1"
+---
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: batch-worker-workload
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: batch-worker
+  container:
+    image: "busybox:1.36"
+    command:
+      - /bin/sh
+      - -c
+      - "while true; do echo working; sleep 30; done"
+---
+apiVersion: openchoreo.dev/v1alpha1
+kind: ReleaseBinding
+metadata:
+  name: batch-worker-development
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: batch-worker
+  environment: development
+  componentTypeEnvironmentConfigs:
+    resources:
+      requests:
+        cpu: "10m"
+        memory: "16Mi"
+      limits:
+        cpu: "50m"
+        memory: "64Mi"

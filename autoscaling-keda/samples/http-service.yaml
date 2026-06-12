@@ -1,0 +1,81 @@
+# Copyright 2026 The OpenChoreo Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# HTTP traffic-driven Autoscaling with KEDA, using the STOCK `service` component type with the
+# `keda-based-scaling` trait ATTACHED (spec.traits).
+#
+# Prerequisites:
+#   1. The data plane advertises the KEDA backend:
+#        kubectl annotate clusterdataplane default \
+#          openchoreo.dev/keda-based-scaling-backend=keda --overwrite
+#   2. The `service` type allows the trait (componenttypes/service.yaml applied — see README).
+---
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: greeter
+  namespace: default
+spec:
+  owner:
+    projectName: default
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/service          # stock default type, unmodified except allowedTraits
+  autoDeploy: true
+  traits:
+    - kind: ClusterTrait
+      name: keda-based-scaling
+      instanceName: keda-based-scaling
+      parameters:
+        enabled: true
+        minReplicas: 0                # 0 = scale to zero
+        maxReplicas: 5
+        # Short cooldown so the demo scales down quickly. Use a larger value (e.g. the
+        # 300s default) in real workloads to avoid cold starts on bursty traffic.
+        cooldownPeriod: 30
+---
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: greeter-workload
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: greeter
+  endpoints:
+    http:
+      type: HTTP
+      port: 9090                      # a wakeable port (see the trait's wakeablePorts)
+      visibility: [external]
+  container:
+    # http-echo binds 0.0.0.0 explicitly (reachable over the pod network on any cluster).
+    # It echoes a fixed message to any path, enough to prove the request reached a woken pod.
+    image: "hashicorp/http-echo:1.0.0"
+    args:
+      - "-listen=0.0.0.0:9090"
+      - "-text=Hello from OpenChoreo Autoscaling with KEDA!"
+---
+apiVersion: openchoreo.dev/v1alpha1
+kind: ReleaseBinding
+metadata:
+  name: greeter-development
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: greeter
+  environment: development
+  componentTypeEnvironmentConfigs:
+    resources:
+      requests:
+        cpu: "25m"
+        memory: "32Mi"
+      limits:
+        cpu: "100m"
+        memory: "128Mi"
+  # Per-environment keda-based-scaling overrides go here, keyed by the trait instanceName.
+  # For example, never scale to zero in production:
+  #   traitEnvironmentConfigs:
+  #     keda-based-scaling:
+  #       minReplicas: 1

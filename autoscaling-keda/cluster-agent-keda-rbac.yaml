@@ -1,0 +1,49 @@
+# Copyright 2026 The OpenChoreo Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# The OpenChoreo data-plane cluster-agent applies the rendered KEDA objects, but
+# its base ClusterRole does not include the KEDA API groups. This grants the agent
+# ServiceAccount permission to manage the KEDA resources the keda-based-scaling trait
+# renders.
+#
+# The subject below is the standard data-plane agent ServiceAccount
+# (`cluster-agent-dataplane` in `openchoreo-data-plane`). If your data plane uses a
+# different ServiceAccount name or namespace, edit the ClusterRoleBinding subject.
+# Apply this on the cluster running the OpenChoreo data plane.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: openchoreo-cluster-agent-keda
+  labels:
+    app.kubernetes.io/name: autoscaling-keda
+    app.kubernetes.io/part-of: openchoreo
+    app.kubernetes.io/component: cluster-agent
+rules:
+  - apiGroups: ["keda.sh"]
+    resources:
+      - scaledobjects
+      - scaledjobs
+      - triggerauthentications
+      - clustertriggerauthentications
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["http.keda.sh"]
+    resources:
+      - interceptorroutes
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: openchoreo-cluster-agent-keda
+  labels:
+    app.kubernetes.io/name: autoscaling-keda
+    app.kubernetes.io/part-of: openchoreo
+    app.kubernetes.io/component: cluster-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: openchoreo-cluster-agent-keda
+subjects:
+  - kind: ServiceAccount
+    name: cluster-agent-dataplane
+    namespace: openchoreo-data-plane
