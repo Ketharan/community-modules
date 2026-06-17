@@ -1,3 +1,4 @@
+{{- if not (index .Values "opentelemetry-collector" "configMap" "create") }}
 # Copyright 2026 The OpenChoreo Authors
 # SPDX-License-Identifier: Apache-2.0
 
@@ -82,3 +83,4 @@ data:
           processors: [{{ join ", " $processors }}]
           {{- end }}
           exporters: [otlphttp]
+{{- end }}

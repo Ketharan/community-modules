@@ -66,7 +66,7 @@ helm upgrade --install observability-tracing-openobserve \
   oci://ghcr.io/openchoreo/helm-charts/observability-tracing-openobserve \
   --create-namespace \
   --namespace openchoreo-observability-plane \
-  --version 0.2.2
+  --version 0.2.4
 ```
 
 To switch to HA mode, disable the standalone chart and enable the distributed chart:
@@ -75,7 +75,7 @@ To switch to HA mode, disable the standalone chart and enable the distributed ch
 helm upgrade --install observability-tracing-openobserve \
   oci://ghcr.io/openchoreo/helm-charts/observability-tracing-openobserve \
   --namespace openchoreo-observability-plane \
-  --version 0.2.2 \
+  --version 0.2.4 \
   --reuse-values \
   --set openobserve-standalone.enabled=false \
   --set openobserve.enabled=true
@@ -90,7 +90,7 @@ Refer to the [openobserve Helm chart documentation](https://github.com/openobser
 >  oci://ghcr.io/openchoreo/helm-charts/observability-tracing-openobserve \
 >  --create-namespace \
 >  --namespace openchoreo-observability-plane \
->  --version 0.2.2 \
+>  --version 0.2.4 \
 >  --set openobserve-standalone.enabled=false
 > ```
 
