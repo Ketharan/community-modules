@@ -5,7 +5,7 @@ apiVersion: v2
 name: observability-metrics-prometheus
 description: A Helm chart for OpenChoreo Observability Metrics module based on Prometheus
 type: application
-version: 0.6.1
+version: 0.6.2
 appVersion: "0.6.1"
 keywords:
   - prometheus

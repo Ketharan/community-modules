@@ -39,7 +39,7 @@ kube-prometheus-stack:
     service:
       port: 9091
       reloaderWebPort: 8081
-      type: LoadBalancer
+      type: ClusterIP
 
   alertmanager:
     enabled: true
