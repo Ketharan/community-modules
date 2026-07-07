@@ -9,6 +9,25 @@ This module installs the [kubernetes-sigs/agent-sandbox](https://github.com/kube
 - Installs the upstream `kubernetes-sigs/agent-sandbox` controller and CRDs on the data plane cluster via a Helm pre-install hook
 - Grants the data plane `cluster-agent` service account permissions to manage `SandboxTemplate`, `SandboxClaim`, `SandboxWarmPool`, and `Sandbox` resources
 - Registers the `ai-agent` ClusterComponentType (`proxy/ai-agent`) that renders sandbox resources via the standard OpenChoreo pipeline; this module provides the upstream controller that fulfills them on the data plane
+- Bundles agent-specific ClusterComponentTypes with custom portal scaffolder templates (see below)
+
+## Bundled agent component types
+
+In addition to the generic `ai-agent` type, this module ships agent-specific
+`ClusterComponentType`s that reference a fixed, pre-built agent image and a
+tailored Backstage scaffolder template. Each such CCT carries a
+`scaffolder.openchoreo.dev/template-url` annotation; when the portal detects it,
+it fetches that custom template (which omits the irrelevant Build & Deploy
+steps) instead of auto-generating one.
+
+The `ClusterComponentType` ships in the Helm chart (`helm/templates/`) and is
+applied to the cluster on install. The scaffolder template lives under
+`agent-sandbox/templates/<name>/template.yaml` (outside the chart) and is served
+raw over HTTP via the annotation URL.
+
+| Component type | Template | Notes |
+|---|---|---|
+| `ai-agent-claude` | `templates/create-ai-agent-claude/template.yaml` | Prompts for an Anthropic API key, injected as `ANTHROPIC_API_KEY`. |
 
 ## Upstream CRDs installed
 

@@ -1,0 +1,76 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: create-ai-agent-claude
+  title: Claude AI Agent
+  description: >-
+    Create a Claude AI agent component. The agent runs as a fixed, pre-built
+    image inside a kernel-isolated sandbox (kubernetes-sigs/agent-sandbox).
+    No build or deploy steps are required — just provide your Anthropic API key.
+  tags:
+    - openchoreo
+    - ai-agent
+    - claude
+spec:
+  type: component
+  owner: openchoreo
+
+  parameters:
+    - title: Component Metadata
+      required:
+        - project
+        - name
+      properties:
+        project:
+          title: Project
+          type: string
+          description: The OpenChoreo project (namespace) to create the component in.
+          ui:field: OpenChoreoProjectPicker
+        name:
+          title: Component Name
+          type: string
+          description: A unique name for the component (lowercase, DNS-compatible).
+          pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+          maxLength: 63
+          ui:autofocus: true
+        displayName:
+          title: Display Name
+          type: string
+          description: A human-friendly name shown in the portal.
+        description:
+          title: Description
+          type: string
+          description: A short description of what this agent does.
+
+    - title: Agent Configuration
+      required:
+        - anthropicApiKey
+      properties:
+        anthropicApiKey:
+          title: Anthropic API Key
+          type: string
+          description: >-
+            Your Anthropic API key. Injected into the agent container as the
+            ANTHROPIC_API_KEY environment variable.
+          ui:widget: password
+
+  steps:
+    - id: create-component
+      name: Create Component
+      action: openchoreo:component:create
+      input:
+        project: ${{ parameters.project }}
+        name: ${{ parameters.name }}
+        displayName: ${{ parameters.displayName }}
+        description: ${{ parameters.description }}
+        componentType: ai-agent-claude
+        containerImage: ttl.sh/claude-sandbox-v2:24h
+        envVars:
+          - name: ANTHROPIC_API_KEY
+            value: ${{ parameters.anthropicApiKey }}
+
+  output:
+    links:
+      - title: View Component
+        icon: catalog
+        entityRef: ${{ steps['create-component'].output.entityRef }}
