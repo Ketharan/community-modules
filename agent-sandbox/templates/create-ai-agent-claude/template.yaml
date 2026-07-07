@@ -12,7 +12,7 @@ metadata:
     - ai-agent
     - claude
 spec:
-  type: component
+  type: Component
   owner: openchoreo
 
   parameters:
