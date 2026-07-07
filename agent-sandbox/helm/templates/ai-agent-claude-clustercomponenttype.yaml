@@ -8,7 +8,7 @@ metadata:
     # The portal fetches this custom scaffolder template (instead of
     # auto-generating one with irrelevant Build & Deploy steps) whenever this
     # annotation is present on the ClusterComponentType.
-    scaffolder.openchoreo.dev/template-url: "https://raw.githubusercontent.com/Ketharan/community-modules/main/agent-sandbox/templates/create-ai-agent-claude/template.yaml"
+    scaffolder.openchoreo.dev/template-url: "https://raw.githubusercontent.com/Ketharan/community-modules/add-ai-agent-claude-template/agent-sandbox/templates/create-ai-agent-claude/template.yaml"
 spec:
   workloadType: proxy
 
