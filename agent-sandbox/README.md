@@ -16,7 +16,7 @@ This module installs the [kubernetes-sigs/agent-sandbox](https://github.com/kube
 In addition to the generic `ai-agent` type, this module ships agent-specific
 `ClusterComponentType`s that reference a fixed, pre-built agent image and a
 tailored Backstage scaffolder template. Each such CCT carries a
-`scaffolder.openchoreo.dev/template-url` annotation; when the portal detects it,
+`scaffolder.openchoreo.dev/backstage-template-url` annotation; when the portal detects it,
 it fetches that custom template (which omits the irrelevant Build & Deploy
 steps) instead of auto-generating one.
 
