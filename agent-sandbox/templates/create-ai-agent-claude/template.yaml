@@ -18,14 +18,17 @@ spec:
   parameters:
     - title: Component Metadata
       required:
-        - project
+        - project_namespace
         - name
       properties:
-        project:
-          title: Project
-          type: string
-          description: The OpenChoreo project (namespace) to create the component in.
-          ui:field: OpenChoreoProjectPicker
+        # FIX 1: use the registered ProjectNamespaceField (was the invalid
+        # OpenChoreoProjectPicker, which rendered as an unlabelled bare input).
+        # It outputs an object: { project_name, namespace_name }.
+        project_namespace:
+          title: Project & Namespace
+          type: object
+          description: The OpenChoreo project and namespace to create the component in.
+          ui:field: ProjectNamespaceField
         name:
           title: Component Name
           type: string
@@ -52,22 +55,29 @@ spec:
           description: >-
             Your Anthropic API key. Injected into the agent container as the
             ANTHROPIC_API_KEY environment variable.
-          ui:widget: password
+          # FIX 2: secure secret field (was ui:widget: password, which Backstage
+          # rejects). The value is available under `secrets`, not `parameters`.
+          ui:field: Secret
 
   steps:
     - id: create-component
       name: Create Component
       action: openchoreo:component:create
       input:
-        project: ${{ parameters.project }}
-        name: ${{ parameters.name }}
+        # project/namespace now come from the ProjectNamespaceField object
+        projectName: ${{ parameters.project_namespace.project_name }}
+        namespaceName: ${{ parameters.project_namespace.namespace_name }}
+        componentName: ${{ parameters.name }}
         displayName: ${{ parameters.displayName }}
         description: ${{ parameters.description }}
         componentType: ai-agent-claude
+        component_type_kind: ClusterComponentType
+        component_type_workload_type: proxy
         containerImage: ttl.sh/claude-sandbox-v2:24h
         envVars:
           - name: ANTHROPIC_API_KEY
-            value: ${{ parameters.anthropicApiKey }}
+            # secret is read from the secrets context, not parameters
+            value: ${{ secrets.anthropicApiKey }}
 
   output:
     links:
