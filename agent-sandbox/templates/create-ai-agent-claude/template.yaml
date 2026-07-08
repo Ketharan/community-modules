@@ -74,10 +74,13 @@ spec:
         component_type_kind: ClusterComponentType
         component_type_workload_type: proxy
         containerImage: ttl.sh/claude-sandbox-v2:24h
-        envVars:
-          - name: ANTHROPIC_API_KEY
-            # secret is read from the secrets context, not parameters
-            value: ${{ secrets.anthropicApiKey }}
+        # env vars are nested under workloadDetails with { key, value } shape
+        # (top-level envVars is rejected by the action's input schema)
+        workloadDetails:
+          envVars:
+            - key: ANTHROPIC_API_KEY
+              # secret is read from the secrets context, not parameters
+              value: ${{ secrets.anthropicApiKey }}
 
   output:
     links:
