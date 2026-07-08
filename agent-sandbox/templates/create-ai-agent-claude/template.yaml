@@ -15,6 +15,13 @@ spec:
   type: Component
   owner: openchoreo
 
+  # Inject the logged-in user's OpenChoreo token as OPENCHOREO_USER_TOKEN so the
+  # create action can authorize component creation as that user (opt-in per
+  # template; without this the action fails with "User authentication token not
+  # available").
+  EXPERIMENTAL_formDecorators:
+    - id: openchoreo:inject-user-token
+
   parameters:
     - title: Component Metadata
       required:
