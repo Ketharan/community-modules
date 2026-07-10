@@ -1,0 +1,40 @@
+// Copyright 2026 The OpenChoreo Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package cloudlogging
+
+import "strings"
+
+const (
+	// OpenChoreo pod-label keys, stamped onto workload pods by the
+	// OpenChoreo controllers. These are the raw Kubernetes label keys.
+	LabelComponentUID   = "openchoreo.dev/component-uid"
+	LabelProjectUID     = "openchoreo.dev/project-uid"
+	LabelEnvironmentUID = "openchoreo.dev/environment-uid"
+	LabelNamespace      = "openchoreo.dev/namespace"
+
+	LabelComponentName   = "openchoreo.dev/component"
+	LabelProjectName     = "openchoreo.dev/project"
+	LabelEnvironmentName = "openchoreo.dev/environment"
+
+	// podLabelPrefix is how GKE's logging agent surfaces Kubernetes pod labels
+	// on a LogEntry, under "k8s-pod/<key>".
+	//
+	// IMPORTANT: the modern GKE managed (Fluent Bit) agent replaces DOTS in the
+	// key with underscores (slashes/hyphens preserved), e.g. the pod label
+	// openchoreo.dev/component-uid surfaces as
+	// labels."k8s-pod/openchoreo_dev/component-uid" — a filter using the raw
+	// dotted key matches nothing. podLabelKey always applies this substitution.
+	podLabelPrefix = "k8s-pod/"
+
+	// k8sContainerResource is the GKE monitored-resource type for
+	// application container logs.
+	k8sContainerResource = "k8s_container"
+
+	// WorkflowNamespacePrefix is Argo's namespace convention for workflow pods.
+	WorkflowNamespacePrefix = "workflows-"
+)
+
+func podLabelKey(rawKey string) string {
+	return podLabelPrefix + strings.ReplaceAll(rawKey, ".", "_")
+}
