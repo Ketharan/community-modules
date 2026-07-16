@@ -3,20 +3,6 @@ Copyright 2026 The OpenChoreo Authors
 SPDX-License-Identifier: Apache-2.0
 */}}
 
-{{- define "observability-tracing-opensearch.validate" -}}
-{{- $mode := (default "" .Values.global.installationMode) -}}
-{{- $allowed := list "singleCluster" "multiClusterExporter" "multiClusterReceiver" -}}
-{{- if not (has $mode $allowed) -}}
-{{- fail (printf "global.installationMode must be one of [%s] (got %q)" (join ", " $allowed) $mode) -}}
-{{- end -}}
-
-{{- if eq $mode "multiClusterExporter" -}}
-{{- if not .Values.opentelemetryCollectorCustomizations.http.observabilityPlaneUrl -}}
-{{- fail "opentelemetryCollectorCustomizations.http.observabilityPlaneUrl is required when global.installationMode is set to \"multiClusterExporter\"." -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
-
 {{/*
 Render the full image reference for a module component, honoring the
 global.imageRegistry override. When the override is set, it replaces the
@@ -25,12 +11,12 @@ registry host of the image repository (the first path segment containing
 The override value may itself carry a path (e.g. registry.example.com/ghcr.io)
 for path-preserving mirrors.
 
-Usage: {{ include "observability-tracing-opensearch.image" (dict "image" .Values.<component>.image "context" .) }}
+Usage: {{ include "observability-logs-opensearch.image" (dict "image" .Values.adapter.image "context" .) }}
 Parameters:
   - image: The component image block (repository, tag)
   - context: The chart root context (.)
 */}}
-{{- define "observability-tracing-opensearch.image" -}}
+{{- define "observability-logs-opensearch.image" -}}
 {{- $repo := .image.repository -}}
 {{- with .context.Values.global.imageRegistry -}}
 {{- $parts := splitList "/" $repo -}}
