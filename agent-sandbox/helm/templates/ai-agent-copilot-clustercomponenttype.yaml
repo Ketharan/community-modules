@@ -7,7 +7,7 @@ metadata:
     openchoreo.dev/display-name: "AI Agent — GitHub Copilot CLI"
     openchoreo.dev/description: "GitHub Copilot CLI running in a kernel-isolated sandbox."
     # Portal fetches this custom scaffolder template instead of auto-generating Build & Deploy steps.
-    scaffolder.openchoreo.dev/backstage-template-url: "https://raw.githubusercontent.com/openchoreo/community-modules/main/agent-sandbox/templates/create-ai-agent-copilot.yaml"
+    scaffolder.openchoreo.dev/backstage-template-url: "https://github.com/openchoreo/community-modules/blob/main/agent-sandbox/templates/create-ai-agent-copilot.yaml"
 spec:
   # Fixed image, kata isolation, terminal-only — no user-tunable parameters.
   workloadType: proxy
