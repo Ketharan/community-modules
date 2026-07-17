@@ -33,6 +33,9 @@ HTTP via the annotation URL.
 | `ai-agent-claude` | `templates/create-ai-agent-claude.yaml` | Claude Code CLI on the fixed [`docker/sandbox-templates:claude-code`](https://docs.docker.com/ai/sandboxes/agents/claude-code/) image, always kata-isolated. Prompts for an Anthropic model + API key; injects `ANTHROPIC_MODEL` and `ANTHROPIC_API_KEY`. Terminal-only — no HTTP endpoint; the pod runs `sleep infinity` and you attach with `kubectl exec -it <pod> -- claude`. |
 | `ai-agent-codex` | `templates/create-ai-agent-codex.yaml` | OpenAI Codex CLI on the fixed [`docker/sandbox-templates:codex`](https://docs.docker.com/ai/sandboxes/agents/codex/) image, always kata-isolated. Prompts for an OpenAI model + API key; injects `OPENAI_MODEL` and `OPENAI_API_KEY`. Terminal-only — no HTTP endpoint; the pod runs `sleep infinity` and you attach with `kubectl exec -it <pod> -- codex`. |
 | `ai-agent-gemini` | `templates/create-ai-agent-gemini.yaml` | Gemini CLI on the fixed [`docker/sandbox-templates:gemini`](https://docs.docker.com/ai/sandboxes/agents/gemini/) image, always kata-isolated. Prompts for a Google model + API key; injects `GEMINI_MODEL` and `GEMINI_API_KEY`. Terminal-only — no HTTP endpoint; the pod runs `sleep infinity` and you attach with `kubectl exec -it <pod> -- gemini`. |
+| `ai-agent-opencode` | `templates/create-ai-agent-opencode.yaml` | Multi-provider OpenCode CLI on the fixed [`docker/sandbox-templates:opencode`](https://docs.docker.com/ai/sandboxes/agents/opencode/) image, always kata-isolated. Prompts for an LLM provider (Anthropic/OpenAI/OpenRouter) + model, injects the provider's API key env var, and mounts `opencode.json` (via `OPENCODE_CONFIG`) to set the default model. Terminal-only — no HTTP endpoint; the pod runs `sleep infinity` and you attach with `kubectl exec -it <pod> -- opencode`. |
+| `ai-agent-cursor` | `templates/create-ai-agent-cursor.yaml` | Cursor CLI on the fixed [`docker/sandbox-templates:cursor-agent`](https://docs.docker.com/ai/sandboxes/agents/cursor/) image, always kata-isolated. Prompts for a Cursor API key; injects `CURSOR_API_KEY`. The model is selected at runtime (`cursor-agent --model`), so there's no model parameter. Terminal-only — no HTTP endpoint; the pod runs `sleep infinity` and you attach with `kubectl exec -it <pod> -- cursor-agent`. |
+| `ai-agent-copilot` | `templates/create-ai-agent-copilot.yaml` | GitHub Copilot CLI on the fixed [`docker/sandbox-templates:copilot`](https://docs.docker.com/ai/sandboxes/agents/copilot/) image, always kata-isolated. Prompts for a model + a GitHub token (a user-owned fine-grained PAT with the "Copilot Requests" permission; requires an active Copilot subscription); injects `COPILOT_MODEL` and `COPILOT_GITHUB_TOKEN`. Terminal-only — no HTTP endpoint; the pod runs `sleep infinity` and you attach with `kubectl exec -it <pod> -- copilot`. |
 
 ## Upstream CRDs installed
 
@@ -63,7 +66,8 @@ requesting a tier with no matching node stay `Pending`.
 | `kata` | `kata-qemu` | `kata-enabled=true` |
 
 The bundled agent component types (`ai-agent-openclaw`, `ai-agent-claude`,
-`ai-agent-codex`, `ai-agent-gemini`) are **always** kata-isolated and expose no
+`ai-agent-codex`, `ai-agent-gemini`, `ai-agent-opencode`, `ai-agent-cursor`,
+`ai-agent-copilot`) are **always** kata-isolated and expose no
 `isolationTier` parameter, so they require `kata-qemu` and `kata-enabled=true`
 nodes. They also tolerate the taint `sandbox=true:NoSchedule`, so you may
 optionally taint sandbox nodes to keep other workloads off them.
